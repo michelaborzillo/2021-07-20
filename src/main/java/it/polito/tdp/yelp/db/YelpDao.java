@@ -112,4 +112,73 @@ public class YelpDao {
 	}
 	
 	
+	public List<User> getVertici (int numero) {
+		/*having filtra dopo l'aggregrazione, where filtra prim)
+		/*ritorna il conteggio, raggruppato per utente*/
+		String sql="SELECT COUNT(r.review_id) AS numero, u.* "
+				+ "FROM users u, reviews r "
+				+ "WHERE r.user_id=u.user_id "
+				+ "GROUP BY u.user_id "
+				+ "HAVING numero >=?";
+		List<User>result= new ArrayList<User>();
+		Connection conn = DBConnect.getConnection();
+
+		try {
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, numero);
+			ResultSet res = st.executeQuery();
+			while (res.next()) {
+				User user = new User(res.getString("user_id"),
+						res.getInt("votes_funny"),
+						res.getInt("votes_useful"),
+						res.getInt("votes_cool"),
+						res.getString("name"),
+						res.getDouble("average_stars"),
+						res.getInt("review_count"));
+				
+				result.add(user);
+			}
+			conn.close();
+			return result;
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+			return null;
+		}
+		
+		
+	}
+	
+	public int calcolaSimilarita (User u1, User u2, int anno) {
+		String sql="SELECT COUNT(*) AS similarita "
+				+ "FROM reviews r1, reviews r2 "
+				+ "WHERE r1.business_id=r2.business_id "
+				+ "AND r1.user_id=? "
+				+ "AND r2.user_id=? "
+				+ "AND YEAR(r1.review_date)=? AND YEAR(r2.review_date)=?";
+		int peso=0;
+		Connection conn = DBConnect.getConnection();
+
+		try {
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setString(1, u1.getUserId());
+			st.setString(2, u2.getUserId());
+			st.setInt(3, anno);
+			st.setInt(4, anno);
+			ResultSet res = st.executeQuery();
+			if(res.next()) {
+				peso=res.getInt("similarita");
+			}
+			conn.close();
+			return peso;
+		}catch (SQLException e) {
+			e.printStackTrace();
+			return -1;
+			}
+		
+	}
+	
+	
+	
+	
 }
