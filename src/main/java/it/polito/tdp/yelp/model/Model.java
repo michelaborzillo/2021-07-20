@@ -3,6 +3,7 @@ package it.polito.tdp.yelp.model;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import org.jgrapht.Graph;
 import org.jgrapht.Graphs;
@@ -12,36 +13,27 @@ import org.jgrapht.graph.SimpleWeightedGraph;
 import it.polito.tdp.yelp.db.YelpDao;
 
 public class Model {
-	private Graph<User, DefaultWeightedEdge> grafo;
-	//elenco di vertici
-	List<User> utenti;
-	private YelpDao dao;
-	public Model() {
+	YelpDao dao;
+	Graph<User, DefaultWeightedEdge> grafo;
+	List<User> user;
+	public Model () {
 		dao= new YelpDao();
-		
 	}
 	
-	
-	public String creaGrafo(int minRevisioni, int anno) {
+	public void creaGrafo(int anno, int recensioni) {
 		this.grafo= new SimpleWeightedGraph<User, DefaultWeightedEdge>(DefaultWeightedEdge.class);
-		utenti= dao.getVertici(minRevisioni);
-		Graphs.addAllVertices(this.grafo, utenti);
-		for (User u1: this.utenti) {
-			for (User u2: this.utenti) {
+		user= dao.getVertici(recensioni);
+		Graphs.addAllVertices(this.grafo, user);
+		for (User u1: this.user) {
+			for (User u2: this.user) {
 				if (!u1.equals(u2) && u1.getUserId().compareTo(u2.getUserId())<0) {
-					int sim= dao.calcolaSimilarita(u1, u2, anno);
-					if (sim> 0) {
-						Graphs.addEdge(this.grafo, u1, u2, sim);
+					int peso= dao.getPeso(anno, u1, u2);
+					if ( peso > 0) {
+						Graphs.addEdge(this.grafo, u1, u2, peso);
 					}
 				}
 			}
 		}
-		return "# VERTICI: "+this.grafo.vertexSet().size()+"\n"+"# ARCHI: "+this.grafo.edgeSet().size();
-//		System.out.println("Grafo creato!");
-//		System.out.println("# VERTICI: "+this.grafo.vertexSet().size());
-//		System.out.println("# ARCHI: "+this.grafo.edgeSet().size());
-//		
-		
 	}
 	public int nVertici() {
 		return this.grafo.vertexSet().size();
@@ -53,33 +45,50 @@ public class Model {
 	
 	}
 	
-	
-	public List<User> getUtenti()  {
-		return this.utenti;
+	public Set<User> getVertici() {
+		return this.grafo.vertexSet();
 	}
 	
 	
-	public List<User> calcolaUtentiSimili(User u) {
+//	public List<User> getSimili(User u) {
+//		int max=0;
+//		for (DefaultWeightedEdge e: this.grafo.edgesOf(u)) {
+//			if (this.grafo.getEdgeWeight(e)>max) {
+//				max=(int) this.grafo.getEdgeWeight(e);
+//			}
+//		}
+//		List<User> result= new ArrayList<>();
+//		for (DefaultWeightedEdge e: this.grafo.edgesOf(u)) {
+//			if (this.grafo.getEdgeWeight(e)==max) {
+//				User u2= Graphs.getOppositeVertex(this.grafo, e, u);
+//				result.add(u2);
+//		}
+//			
+//		
+//		
+//	}
+//		Collections.sort(result);
+//		return result;
+//	}
+	public List<UtentiSimili> getUtentiSimili (User u) {
 		int max=0;
-		for (DefaultWeightedEdge e: this.grafo.edgesOf(u)) {  //edgesOf mi da gli archi collegati ad u
-			if (this.grafo.getEdgeWeight(e)>max) {
-				max= (int )this.grafo.getEdgeWeight(e);
-				
-			}
-			
-		}
+		List<UtentiSimili> simili= new ArrayList<UtentiSimili>();
 		
-		List<User> result = new ArrayList<User>();
 		for (DefaultWeightedEdge e: this.grafo.edgesOf(u)) {
-			if (this.grafo.getEdgeWeight(e)==max)  {//prendo uno dei vertici collegato all'arco, non u
-				User u2= Graphs.getOppositeVertex(this.grafo, e, u); //trova opposto
-				result.add(u2);
+			if (this.grafo.getEdgeWeight(e)>max) {
+				max=(int) this.grafo.getEdgeWeight(e);
 			}
 		}
-		Collections.sort(result);
-		return result;
-		
-			
+		List<User> result= new ArrayList<>();
+		for (DefaultWeightedEdge e: this.grafo.edgesOf(u)) {
+			if (this.grafo.getEdgeWeight(e)==max) {
+				User u2= Graphs.getOppositeVertex(this.grafo, e, u);
+				result.add(u2);
+		}
 	}
-	
+		for (User uu: result) {
+			simili.add(new UtentiSimili(uu,this.grafo.getEdgeWeight(this.grafo.getEdge(u,uu))));
+		}
+		return simili;
+	}
 }
